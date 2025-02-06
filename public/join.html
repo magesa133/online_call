@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Meeting</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f9;
+        }
+
+        .form-container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h2>Join Meeting</h2>
+        <input type="text" id="roomId" placeholder="Room ID" required />
+        <button onclick="joinMeeting()">Join</button>
+        <p class="error" id="errorMessage"></p>
+    </div>
+
+    <script>
+        let userId;
+
+        // Function to fetch the user ID from the backend
+        async function fetchUserId() {
+            try {
+                const response = await fetch('/get-user-id', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + getJwtToken()
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    userId = data.userId;
+                } else {
+                    throw new Error('Failed to fetch user ID');
+                }
+            } catch (error) {
+                console.error('Error fetching user ID:', error.message);
+                alert('Failed to fetch user ID. Please log in again.');
+                window.location.href = '/login.html'; // Redirect to login page
+            }
+        }
+
+        // Retrieve the JWT token from localStorage
+        function getJwtToken() {
+            const token = localStorage.getItem('jwtToken');
+            if (!token) {
+                alert('No token found. Please log in.');
+                window.location.href = '/login.html'; // Redirect to login page
+            }
+            return token;
+        }
+
+        // Join a meeting
+        async function joinMeeting() {
+            if (!userId) {
+                await fetchUserId(); // Fetch user ID if not already fetched
+            }
+
+            if (!userId) {
+                alert('User ID not found. Please log in.');
+                return;
+            }
+
+            const roomId = document.getElementById('roomId').value.trim();
+            if (!roomId) {
+                alert('Please enter a valid room ID.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/join-meeting', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ roomId, userId })
+                });
+
+                if (response.ok) {
+                    window.location.href = `/meeting?room=${roomId}`;
+                } else {
+                    const errorData = await response.json();
+                    alert(errorData.error || 'Failed to join the meeting');
+                }
+            } catch (error) {
+                console.error('Error joining meeting:', error.message);
+                alert('Failed to join the meeting');
+            }
+        }
+
+        // Fetch user ID on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchUserId();
+        });
+    </script>
+</body>
+</html>
